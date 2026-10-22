@@ -376,12 +376,19 @@
   function hide(el) { el.hidden = true; }
 
   // ================= Party Setup Modal =================
+  const MAX_PLAYERS = 6;
   let draftPartySize = 2;
   let draftVetoes = true;
+  let draftNames = []; // live names while the modal is open (survives add/remove re-renders)
 
   function openPartyModal() {
     draftPartySize = config.partySize || 2;
     draftVetoes = config.vetoesEnabled;
+    // Seed editable drafts from saved names, blanking the generic "Player N" placeholders
+    draftNames = Array.from({ length: draftPartySize }, (_, i) => {
+      const n = (config.savedPlayers || [])[i];
+      return n && !/^Player \d+$/.test(n) ? n : "";
+    });
     updatePartySizeSeg();
     updateVetoSeg();
     renderNameInputs();
@@ -403,25 +410,85 @@
     });
   }
 
+  // Read current input values back into draftNames so they survive a re-render
+  function readNameInputs() {
+    document.querySelectorAll("#nameInputs .text-input").forEach(inp => {
+      const i = Number(inp.dataset.idx);
+      if (!Number.isNaN(i)) draftNames[i] = inp.value;
+    });
+  }
+
+  // Keep draftNames length aligned with draftPartySize
+  function syncDraftNames() {
+    readNameInputs();
+    if (draftNames.length < draftPartySize) {
+      while (draftNames.length < draftPartySize) draftNames.push("");
+    } else if (draftNames.length > draftPartySize) {
+      draftNames.length = draftPartySize;
+    }
+  }
+
   function renderNameInputs() {
     const wrap = $("nameInputs");
     wrap.innerHTML = "";
-    const existing = config.savedPlayers || [];
+    const isGroup = draftPartySize >= 3;
     for (let i = 0; i < draftPartySize; i++) {
+      const row = document.createElement("div");
+      row.className = "name-row";
+
       const input = document.createElement("input");
       input.type = "text";
       input.className = "text-input";
       input.placeholder = `Player ${i + 1} Name`;
       input.maxLength = 18;
-      input.value = existing[i] && !/^Player \d+$/.test(existing[i]) ? existing[i] : "";
+      input.value = draftNames[i] || "";
       input.dataset.idx = String(i);
-      wrap.appendChild(input);
+      row.appendChild(input);
+
+      // In group mode, allow removing any row below the 2-player floor
+      if (isGroup && draftPartySize > 2) {
+        const rm = document.createElement("button");
+        rm.type = "button";
+        rm.className = "name-remove";
+        rm.setAttribute("aria-label", `Remove player ${i + 1}`);
+        rm.textContent = "✕";
+        rm.addEventListener("click", () => {
+          readNameInputs();
+          draftNames.splice(i, 1);
+          draftPartySize = draftNames.length;
+          updatePartySizeSeg();
+          renderNameInputs();
+        });
+        row.appendChild(rm);
+      }
+      wrap.appendChild(row);
+    }
+
+    // "Add player" button for group mode, up to the max
+    if (isGroup && draftPartySize < MAX_PLAYERS) {
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "add-player-btn";
+      addBtn.textContent = "+ Add player";
+      addBtn.addEventListener("click", () => {
+        readNameInputs();
+        draftNames.push("");
+        draftPartySize = draftNames.length;
+        updatePartySizeSeg();
+        renderNameInputs();
+      });
+      wrap.appendChild(addBtn);
+    } else if (isGroup && draftPartySize >= MAX_PLAYERS) {
+      const note = document.createElement("p");
+      note.className = "party-max-note";
+      note.textContent = `Max ${MAX_PLAYERS} players`;
+      wrap.appendChild(note);
     }
   }
 
   function saveParty() {
-    const inputs = [...document.querySelectorAll("#nameInputs .text-input")];
-    const names = inputs.map((inp, i) => inp.value.trim() || `Player ${i + 1}`);
+    readNameInputs();
+    const names = draftNames.slice(0, draftPartySize).map((n, i) => (n || "").trim() || `Player ${i + 1}`);
     config.partySize = draftPartySize;
     config.savedPlayers = names;
     config.vetoesEnabled = draftVetoes;
@@ -560,7 +627,8 @@
     document.querySelectorAll("#partySizeSeg .seg-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         draftPartySize = Number(btn.dataset.size);
-        if (draftPartySize === 3) draftPartySize = Math.max(3, Math.min(6, config.partySize >= 3 ? config.partySize : 3));
+        if (draftPartySize === 3) draftPartySize = Math.max(3, Math.min(MAX_PLAYERS, config.partySize >= 3 ? config.partySize : 3));
+        syncDraftNames();
         updatePartySizeSeg();
         renderNameInputs();
       });
