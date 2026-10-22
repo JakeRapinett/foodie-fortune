@@ -1,5 +1,6 @@
 /* ============ Foodie Fortune — styles ============ */
-:root {
+:root,
+[data-theme="classic"] {
   --bg: #FAF7F2;
   --surface: #FFFFFF;
   --ink: #3D405B;
@@ -16,6 +17,40 @@
   --shadow: 0 8px 28px rgba(61, 64, 91, 0.12);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* 🎉 Party — brighter, hotter, celebratory */
+[data-theme="party"] {
+  --bg: #FDF2F8;
+  --surface: #FFFFFF;
+  --ink: #2A1A3E;
+  --ink-soft: #7A5C86;
+  --line: #F3D9EC;
+  --terracotta: #EC4899;   /* hot pink */
+  --sage: #22D3A6;         /* mint */
+  --mustard: #FACC15;      /* lime-gold */
+  --slate: #7C3AED;        /* electric purple */
+  --coral: #FB7185;        /* coral-rose */
+  --teal: #06B6D4;         /* cyan */
+  --danger: #E11D48;
+  --shadow: 0 10px 32px rgba(124, 58, 237, 0.18);
+}
+
+/* 🎲 Games Night — dark tavern, parchment & arcane accents */
+[data-theme="games"] {
+  --bg: #1C1526;
+  --surface: #2A2036;
+  --ink: #EFE4CF;          /* parchment */
+  --ink-soft: #B6A68C;
+  --line: #3C2F4C;
+  --terracotta: #D98E3A;   /* ember-gold */
+  --sage: #5E9E8E;         /* arcane teal */
+  --mustard: #E6C15A;      /* candle gold */
+  --slate: #8B6FB0;        /* amethyst */
+  --coral: #C96B4A;        /* forge copper */
+  --teal: #4FA3A0;         /* potion teal */
+  --danger: #C8484B;
+  --shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -221,6 +256,39 @@ body {
 .modal-title { margin: 0 0 16px; font-size: 22px; color: var(--terracotta); text-align: center; }
 
 .field-label { display: block; font-size: 13px; font-weight: 700; color: var(--ink-soft); margin: 14px 0 7px; }
+
+/* Theme picker */
+.theme-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+.theme-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.theme-card:hover { transform: translateY(-1px); }
+.theme-card.is-active { border-color: var(--terracotta); }
+.theme-swatch {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(0,0,0,0.08);
+}
+.theme-swatch--classic { background: linear-gradient(135deg, #E07A5F 0 33%, #81B29A 33% 66%, #F2CC8F 66% 100%); }
+.theme-swatch--party   { background: linear-gradient(135deg, #EC4899 0 33%, #7C3AED 33% 66%, #FACC15 66% 100%); }
+.theme-swatch--games   { background: linear-gradient(135deg, #1C1526 0 33%, #D98E3A 33% 66%, #5E9E8E 66% 100%); }
+.theme-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.theme-name { font-weight: 700; font-size: 16px; }
+.theme-desc { font-size: 13px; color: var(--ink-soft); }
+
 
 /* Segmented controls */
 .seg { display: flex; gap: 6px; background: var(--surface); padding: 5px; border-radius: 12px; box-shadow: var(--shadow); }
