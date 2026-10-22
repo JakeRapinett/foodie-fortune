@@ -105,7 +105,7 @@ body {
 /* ---- Wheel ---- */
 .wheel-wrap {
   position: relative;
-  width: min(86vw, 360px);
+  width: min(86vw, 380px);
   aspect-ratio: 1 / 1;
   margin: 8px 0;
   display: grid;
@@ -358,4 +358,38 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* ============ Desktop / large viewports ============ */
+/* Mobile keeps its snug column; from tablet-portrait up we widen the shell
+   and let the wheel grow. The wheel is height-bounded (min of width and
+   viewport-height budgets) so it never pushes the Spin button off a short
+   laptop screen. The canvas redraws crisply at any size via sizeCanvas(). */
+@media (min-width: 768px) {
+  .app {
+    max-width: 720px;
+    padding-top: calc(24px + var(--safe-top));
+  }
+  .brand { margin: 20px 0 14px; }
+  .brand-sub { font-size: 16px; }
+  .mode-toggle { max-width: 420px; }
+  .mode-btn { font-size: 16px; padding: 13px 10px; }
+
+  .wheel-wrap {
+    /* grow with the viewport but stay bounded by height so the full layout
+       (toggle + wheel + spin + chips) fits a laptop screen without scroll */
+    width: min(72vw, 58vh, 540px);
+  }
+  .hub { width: 68px; height: 68px; }
+  .hub::after { font-size: 28px; }
+  .pointer { font-size: 36px; }
+
+  .spin-btn { max-width: 420px; font-size: 20px; padding: 18px; }
+  .chip { font-size: 15px; padding: 9px 15px; }
+  .vetoes-label { font-size: 15px; }
+}
+
+@media (min-width: 1200px) {
+  .app { max-width: 820px; }
+  .wheel-wrap { width: min(60vw, 62vh, 620px); }
 }
