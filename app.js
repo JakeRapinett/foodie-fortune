@@ -472,17 +472,35 @@
     });
   }
 
+  function firstEmoji(str) {
+    const s = (str || "").trim();
+    if (!s) return "";
+    // Grab the first user-perceived character (handles ZWJ/flag/skin-tone
+    // sequences as one glyph) so a pasted "🍕 pizza" yields just "🍕".
+    try {
+      if (typeof Intl !== "undefined" && Intl.Segmenter) {
+        const seg = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+        const first = seg.segment(s)[Symbol.iterator]().next().value;
+        if (first) return first.segment.trim();
+      }
+    } catch (e) { /* fall through to code-point split */ }
+    return [...s][0] || "";
+  }
+
   function addCuisine() {
     const input = $("newCuisineName");
+    const emojiInput = $("newCuisineEmoji");
     const name = input.value.trim();
     if (!name) return;
+    const emoji = firstEmoji(emojiInput.value) || "🍽️";
     config.cuisines.push({
       id: "cx_" + Date.now().toString(36),
       name,
-      emoji: "🍽️",
+      emoji,
       enabled: true
     });
     input.value = "";
+    emojiInput.value = "";
     saveConfig();
     renderCuisineList();
     drawWheel();
@@ -548,6 +566,7 @@
     // Cuisine modal
     $("addCuisineBtn").addEventListener("click", addCuisine);
     $("newCuisineName").addEventListener("keydown", (e) => { if (e.key === "Enter") addCuisine(); });
+    $("newCuisineEmoji").addEventListener("keydown", (e) => { if (e.key === "Enter") addCuisine(); });
     $("restoreDefaultsBtn").addEventListener("click", restoreDefaults);
     $("closeCuisineBtn").addEventListener("click", () => hide(cuisineModal));
 
