@@ -81,6 +81,7 @@
 
   const modeTakeaway = $("modeTakeaway");
   const modeDineIn = $("modeDineIn");
+  const modeCookHome = $("modeCookHome");
 
   // Modals
   const partyModal = $("partyModal");
@@ -251,7 +252,8 @@
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + " takeaway")}`
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + " restaurants near me")}`;
     const uber = `https://www.ubereats.com/search?q=${encodeURIComponent(name)}`;
-    return { maps, uber };
+    const recipe = `https://www.recipetineats.com/?s=${encodeURIComponent(name)}`;
+    return { maps, uber, recipe };
   }
 
   function canStillVeto() {
@@ -266,11 +268,16 @@
     $("resultEmoji").textContent = w.emoji;
     $("resultName").textContent = w.name;
 
-    const { maps, uber } = deepLinks(w, session.mode);
+    const { maps, uber, recipe } = deepLinks(w, session.mode);
+    const cookHome = session.mode === "cook_home";
     $("mapsLink").href = maps;
+    $("mapsLink").classList.toggle("hidden", cookHome);
     const uberLink = $("uberLink");
     uberLink.href = uber;
-    uberLink.classList.toggle("hidden", session.mode === "dine_in");
+    uberLink.classList.toggle("hidden", session.mode !== "takeaway");
+    const recipeLink = $("recipeLink");
+    recipeLink.href = recipe;
+    recipeLink.classList.toggle("hidden", !cookHome);
 
     const vetoSection = $("vetoSection");
     const finalBanner = $("finalBanner");
@@ -358,8 +365,10 @@
     saveConfig();
     modeTakeaway.classList.toggle("is-active", mode === "takeaway");
     modeDineIn.classList.toggle("is-active", mode === "dine_in");
+    modeCookHome.classList.toggle("is-active", mode === "cook_home");
     modeTakeaway.setAttribute("aria-selected", mode === "takeaway");
     modeDineIn.setAttribute("aria-selected", mode === "dine_in");
+    modeCookHome.setAttribute("aria-selected", mode === "cook_home");
   }
 
   // ================= Modal show/hide =================
@@ -541,6 +550,7 @@
 
     modeTakeaway.addEventListener("click", () => setMode("takeaway"));
     modeDineIn.addEventListener("click", () => setMode("dine_in"));
+    modeCookHome.addEventListener("click", () => setMode("cook_home"));
 
     $("btnParty").addEventListener("click", openPartyModal);
     $("btnCuisines").addEventListener("click", openCuisineModal);
