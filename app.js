@@ -343,7 +343,7 @@
     if (names.length === 1) text = names[0];
     else if (names.length === 2) text = `${names[0]} & ${names[1]}`;
     else text = names.slice(0, -1).join(", ") + " & " + names[names.length - 1];
-    partyLine.innerHTML = `Dining Tonight: ${escapeHtml(text)} <span aria-hidden="true">✏️</span>`;
+    partyLine.innerHTML = `Dining Tonight: ${escapeHtml(text)}`;
   }
 
   function escapeHtml(s) {
