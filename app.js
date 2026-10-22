@@ -4,7 +4,18 @@
 
   const STORAGE_KEY = "foodie_fortune_v1";
 
-  const PALETTE = ["#E07A5F", "#81B29A", "#F2CC8F", "#3D405B", "#F4A261", "#2A9D8F"];
+  // Wheel/confetti palette — read live from the active theme's CSS variables
+  // so a theme switch recolours the wheel in one place.
+  const PALETTE_VARS = ["--terracotta", "--sage", "--mustard", "--slate", "--coral", "--teal"];
+  const PALETTE_FALLBACK = ["#E07A5F", "#81B29A", "#F2CC8F", "#3D405B", "#F4A261", "#2A9D8F"];
+  function palette() {
+    try {
+      const cs = getComputedStyle(document.documentElement);
+      const out = PALETTE_VARS.map(v => (cs.getPropertyValue(v) || "").trim());
+      if (out.every(Boolean)) return out;
+    } catch (e) { /* fall through */ }
+    return PALETTE_FALLBACK;
+  }
 
   const DEFAULT_CUISINES = [
     { id: "c_jp", name: "Japanese", emoji: "🍣", enabled: true },
@@ -20,6 +31,68 @@
   ];
 
   const clone = (x) => JSON.parse(JSON.stringify(x));
+
+  // ================= Themes (palette via CSS data-theme + copy below) =================
+  const THEME_IDS = ["classic", "party", "games"];
+  const THEMES = {
+    classic: {
+      partyLinePrefix: "Dining Tonight",
+      modeTakeaway: "🛋️ Takeaway",
+      modeDineIn: "🍽️ Dine-In",
+      modeCookHome: "🧑‍🍳 Cook In",
+      spinBtn: "🎲 SPIN THE WHEEL",
+      resultKicker: "🎉 THE WHEEL HAS SPOKEN!",
+      vetoPrompt: "Not feeling it? Spend a veto:",
+      vetoBtn: (name) => `🙅 ${name} Vetoes`,
+      finalBanner: "🔒 No Vetoes Left — The Wheel's Decision is Final!",
+      chipReady: (name) => `🟢 ${name}: 1 Veto`,
+      chipSpent: (name) => `❌ ${name}: Spent`,
+      suddenDeath: "Sudden Death — No Vetoes",
+      vetoesLabel: "Vetoes Left:",
+      partyTitle: "Who's Eating? 🍴",
+      saveParty: "Let's Eat 🎲",
+      menuTitle: "Tonight's Menu ⚙️"
+    },
+    party: {
+      partyLinePrefix: "Tonight's Feast",
+      modeTakeaway: "🎁 Delivery",
+      modeDineIn: "🥂 Go Out",
+      modeCookHome: "🍳 Home Feast",
+      spinBtn: "🎉 SPIN TO FEAST",
+      resultKicker: "🥳 THE FEAST IS SET!",
+      vetoPrompt: "Not vibing? Use a reroll:",
+      vetoBtn: (name) => `🙅 ${name} Rerolls`,
+      finalBanner: "🔒 No Rerolls Left — The Feast is Locked In!",
+      chipReady: (name) => `🟢 ${name}: 1 Reroll`,
+      chipSpent: (name) => `❌ ${name}: Spent`,
+      suddenDeath: "Sudden Death — No Rerolls",
+      vetoesLabel: "Rerolls Left:",
+      partyTitle: "Who's Partying? 🎉",
+      saveParty: "Let's Party 🎉",
+      menuTitle: "Tonight's Spread ⚙️"
+    },
+    games: {
+      partyLinePrefix: "The Party",
+      modeTakeaway: "🛖 Provisions",
+      modeDineIn: "🏰 Venture Out",
+      modeCookHome: "🔥 Cook Rations",
+      spinBtn: "🎲 ROLL FOR DINNER",
+      resultKicker: "⚔️ THE DICE DECREE!",
+      vetoPrompt: "Reject the quest? Spend a reroll:",
+      vetoBtn: (name) => `🎲 ${name} Rerolls`,
+      finalBanner: "🔒 No Rerolls Left — The Dice Are Cast!",
+      chipReady: (name) => `🎲 ${name}: 1 Reroll`,
+      chipSpent: (name) => `💀 ${name}: Spent`,
+      suddenDeath: "Sudden Death — No Rerolls",
+      vetoesLabel: "Rerolls Left:",
+      partyTitle: "Gather the Party 🎲",
+      saveParty: "Begin the Quest 🎲",
+      menuTitle: "The Provisions ⚙️"
+    }
+  };
+  function currentTheme() {
+    return THEMES[config && THEME_IDS.includes(config.theme) ? config.theme : "classic"];
+  }
 
   // --------------- Persistent config ---------------
   function loadConfig() {
@@ -44,6 +117,7 @@
       savedPlayers: ["Player 1", "Player 2"],
       vetoesEnabled: true,
       lastMode: "takeaway",
+      theme: "classic",
       cuisines: clone(DEFAULT_CUISINES)
     };
   }
@@ -87,6 +161,7 @@
   const partyModal = $("partyModal");
   const cuisineModal = $("cuisineModal");
   const resultModal = $("resultModal");
+  const themeModal = $("themeModal");
 
   // --------------- Helpers ---------------
   function triggerHaptic(ms = 12) {
@@ -102,7 +177,7 @@
   function fireConfetti() {
     try {
       if (window.confetti) {
-        window.confetti({ particleCount: 140, spread: 75, origin: { y: 0.35 }, colors: PALETTE });
+        window.confetti({ particleCount: 140, spread: 75, origin: { y: 0.35 }, colors: palette() });
       }
     } catch (e) { /* optional CDN */ }
   }
@@ -122,10 +197,11 @@
   }
 
   function colorFor(index, total) {
-    let c = PALETTE[index % PALETTE.length];
+    const pal = palette();
+    let c = pal[index % pal.length];
     // Ensure last slice doesn't match first (wrap-around neighbor)
-    if (index === total - 1 && c === PALETTE[0] && total > 1) {
-      c = PALETTE[(index + 1) % PALETTE.length];
+    if (index === total - 1 && c === pal[0] && total > 1) {
+      c = pal[(index + 1) % pal.length];
     }
     return c;
   }
@@ -139,7 +215,9 @@
     const list = activeCuisines();
     const n = list.length;
     if (n === 0) {
-      ctx.fillStyle = "#ECE6DC";
+      try {
+        ctx.fillStyle = (getComputedStyle(document.documentElement).getPropertyValue("--line") || "#ECE6DC").trim() || "#ECE6DC";
+      } catch (e) { ctx.fillStyle = "#ECE6DC"; }
       ctx.beginPath();
       ctx.arc(r, r, r - 2, 0, TAU);
       ctx.fill();
@@ -302,7 +380,7 @@
     session.players.filter(p => !p.hasVetoed).forEach(p => {
       const b = document.createElement("button");
       b.className = "btn-veto";
-      b.textContent = `🙅 ${p.name} Vetoes`;
+      b.textContent = currentTheme().vetoBtn(p.name);
       b.addEventListener("click", () => executeVeto(p));
       wrap.appendChild(b);
     });
@@ -320,18 +398,19 @@
 
   // ================= Veto chips =================
   function renderChips() {
+    const t = currentTheme();
     chipRow.innerHTML = "";
     if (!config.vetoesEnabled) {
       const c = document.createElement("span");
       c.className = "chip spent";
-      c.textContent = "Sudden Death — No Vetoes";
+      c.textContent = t.suddenDeath;
       chipRow.appendChild(c);
       return;
     }
     session.players.forEach(p => {
       const c = document.createElement("span");
       c.className = "chip" + (p.hasVetoed ? " spent" : "");
-      c.textContent = p.hasVetoed ? `❌ ${p.name}: Spent` : `🟢 ${p.name}: 1 Veto`;
+      c.textContent = p.hasVetoed ? t.chipSpent(p.name) : t.chipReady(p.name);
       chipRow.appendChild(c);
     });
   }
@@ -343,7 +422,7 @@
     if (names.length === 1) text = names[0];
     else if (names.length === 2) text = `${names[0]} & ${names[1]}`;
     else text = names.slice(0, -1).join(", ") + " & " + names[names.length - 1];
-    partyLine.innerHTML = `Dining Tonight: ${escapeHtml(text)}`;
+    partyLine.innerHTML = `${escapeHtml(currentTheme().partyLinePrefix)}: ${escapeHtml(text)}`;
   }
 
   function escapeHtml(s) {
@@ -356,6 +435,45 @@
     const ok = n >= 2;
     spinBtn.disabled = !ok || session.isSpinning;
     spinHint.hidden = ok;
+  }
+
+  // ================= Theme =================
+  function applyTheme() {
+    const id = config && THEME_IDS.includes(config.theme) ? config.theme : "classic";
+    const t = THEMES[id];
+    document.documentElement.setAttribute("data-theme", id);
+
+    // Static labels
+    modeTakeaway.textContent = t.modeTakeaway;
+    modeDineIn.textContent = t.modeDineIn;
+    modeCookHome.textContent = t.modeCookHome;
+    spinBtn.textContent = t.spinBtn;
+    $("resultKicker").textContent = t.resultKicker;
+    $("vetoPrompt").textContent = t.vetoPrompt;
+    $("finalBanner").textContent = t.finalBanner;
+    $("vetoesLabel").textContent = t.vetoesLabel;
+    $("partyTitle").textContent = t.partyTitle;
+    $("savePartyBtn").textContent = t.saveParty;
+    $("cuisineTitle").textContent = t.menuTitle;
+
+    // Reflect selection in the theme picker
+    document.querySelectorAll("#themeList .theme-card").forEach(card => {
+      const active = card.dataset.themeId === id;
+      card.classList.toggle("is-active", active);
+      card.setAttribute("aria-checked", active ? "true" : "false");
+    });
+
+    // Dynamic strings + wheel colours
+    renderPartyLine();
+    renderChips();
+    drawWheel();
+  }
+
+  function setTheme(id) {
+    if (!THEME_IDS.includes(id)) return;
+    config.theme = id;
+    saveConfig();
+    applyTheme();
   }
 
   // ================= Mode toggle =================
@@ -603,10 +721,8 @@
 
   // ================= Render all =================
   function renderAll() {
-    renderPartyLine();
-    renderChips();
+    applyTheme();     // sets data-theme, all labels, party line, chips, and wheel colours
     setMode(session.mode);
-    drawWheel();
     refreshSpinState();
   }
 
@@ -621,7 +737,14 @@
 
     $("btnParty").addEventListener("click", openPartyModal);
     $("btnCuisines").addEventListener("click", openCuisineModal);
+    $("btnTheme").addEventListener("click", () => show(themeModal));
     $("btnReset").addEventListener("click", resetSession);
+
+    // Theme modal
+    document.querySelectorAll("#themeList .theme-card").forEach(card => {
+      card.addEventListener("click", () => setTheme(card.dataset.themeId));
+    });
+    $("closeThemeBtn").addEventListener("click", () => hide(themeModal));
 
     // Party modal
     document.querySelectorAll("#partySizeSeg .seg-btn").forEach(btn => {
@@ -652,7 +775,7 @@
     $("closeResultBtn").addEventListener("click", () => hide(resultModal));
 
     // Close modals when tapping the dark overlay
-    [partyModal, cuisineModal, resultModal].forEach(m => {
+    [partyModal, cuisineModal, resultModal, themeModal].forEach(m => {
       m.addEventListener("click", (e) => { if (e.target === m) hide(m); });
     });
 

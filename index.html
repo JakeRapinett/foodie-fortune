@@ -21,6 +21,7 @@
     <header class="topbar">
       <button class="icon-btn" id="btnCuisines" aria-label="Edit cuisines" title="Cuisines">⚙️</button>
       <button class="icon-btn" id="btnParty" aria-label="Edit party" title="Party">👥</button>
+      <button class="icon-btn" id="btnTheme" aria-label="Change theme" title="Theme">🎨</button>
       <button class="icon-btn" id="btnReset" aria-label="Reset session" title="Reset session">🔄</button>
     </header>
 
@@ -46,7 +47,7 @@
     <button class="spin-btn" id="spinBtn">🎲 SPIN THE WHEEL</button>
 
     <section class="vetoes">
-      <span class="vetoes-label">Vetoes Left:</span>
+      <span class="vetoes-label" id="vetoesLabel">Vetoes Left:</span>
       <div class="chip-row" id="chipRow"></div>
     </section>
   </main>
@@ -77,6 +78,39 @@
     </div>
   </div>
 
+  <!-- ============ THEME PICKER MODAL ============ -->
+  <div class="modal-overlay" id="themeModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="themeTitle">
+      <h2 id="themeTitle" class="modal-title">Pick a Vibe 🎨</h2>
+      <div class="theme-list" id="themeList" role="radiogroup" aria-label="App theme">
+        <button class="theme-card" data-theme-id="classic" role="radio">
+          <span class="theme-swatch theme-swatch--classic" aria-hidden="true"></span>
+          <span class="theme-meta">
+            <span class="theme-name">🍽️ Classic</span>
+            <span class="theme-desc">Warm &amp; appetising — the original.</span>
+          </span>
+        </button>
+        <button class="theme-card" data-theme-id="party" role="radio">
+          <span class="theme-swatch theme-swatch--party" aria-hidden="true"></span>
+          <span class="theme-meta">
+            <span class="theme-name">🎉 Party</span>
+            <span class="theme-desc">Bright, loud, celebratory.</span>
+          </span>
+        </button>
+        <button class="theme-card" data-theme-id="games" role="radio">
+          <span class="theme-swatch theme-swatch--games" aria-hidden="true"></span>
+          <span class="theme-meta">
+            <span class="theme-name">🎲 Games Night</span>
+            <span class="theme-desc">Dark tavern, roll for dinner.</span>
+          </span>
+        </button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-primary" id="closeThemeBtn">Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ CUISINE CUSTOMIZER MODAL ============ -->
   <div class="modal-overlay" id="cuisineModal" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cuisineTitle">
@@ -97,7 +131,7 @@
   <!-- ============ RESULT MODAL ============ -->
   <div class="modal-overlay" id="resultModal" hidden>
     <div class="modal modal--result" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
-      <p class="result-kicker">🎉 THE WHEEL HAS SPOKEN!</p>
+      <p class="result-kicker" id="resultKicker">🎉 THE WHEEL HAS SPOKEN!</p>
       <h2 id="resultTitle" class="result-cuisine"><span id="resultEmoji"></span> <span id="resultName"></span></h2>
 
       <div class="result-actions">
