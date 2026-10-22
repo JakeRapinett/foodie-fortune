@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Foodie Fortune" />
+  <meta name="theme-color" content="#FAF7F2" />
+  <meta name="description" content="Spin the wheel to decide what's for dinner. A privacy-first cuisine randomizer PWA." />
+  <title>Foodie Fortune</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+</head>
+<body>
+  <!-- ============ MAIN APP ============ -->
+  <main id="app" class="app" hidden>
+    <header class="topbar">
+      <button class="icon-btn" id="btnCuisines" aria-label="Edit cuisines" title="Cuisines">⚙️</button>
+      <button class="icon-btn" id="btnParty" aria-label="Edit party" title="Party">👥</button>
+      <button class="icon-btn" id="btnReset" aria-label="Reset session" title="Reset session">🔄</button>
+    </header>
+
+    <section class="brand">
+      <h1 class="brand-title">FOODIE FORTUNE</h1>
+      <p class="brand-sub" id="partyLine">Dining Tonight: &mdash;</p>
+    </section>
+
+    <div class="mode-toggle" role="tablist" aria-label="Dining mode">
+      <button class="mode-btn is-active" id="modeTakeaway" role="tab" aria-selected="true">🛋️ Takeaway</button>
+      <button class="mode-btn" id="modeDineIn" role="tab" aria-selected="false">🍽️ Dine-In</button>
+    </div>
+
+    <div class="wheel-wrap">
+      <div class="pointer" id="pointer" aria-hidden="true">▼</div>
+      <canvas id="wheel" class="wheel" aria-label="Cuisine wheel"></canvas>
+      <button class="hub" id="hub" aria-label="Spin the wheel"></button>
+    </div>
+
+    <p class="spin-hint" id="spinHint" hidden>Enable at least 2 cuisines to spin!</p>
+
+    <button class="spin-btn" id="spinBtn">🎲 SPIN THE WHEEL</button>
+
+    <section class="vetoes">
+      <span class="vetoes-label">Vetoes Left:</span>
+      <div class="chip-row" id="chipRow"></div>
+    </section>
+  </main>
+
+  <!-- ============ PARTY SETUP MODAL ============ -->
+  <div class="modal-overlay" id="partyModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="partyTitle">
+      <h2 id="partyTitle" class="modal-title">Who's Eating? 🍴</h2>
+
+      <label class="field-label">Party Size</label>
+      <div class="seg" id="partySizeSeg" role="radiogroup" aria-label="Party size">
+        <button class="seg-btn" data-size="1" role="radio">1 · Solo</button>
+        <button class="seg-btn" data-size="2" role="radio">2 · Couple</button>
+        <button class="seg-btn" data-size="3" role="radio">3+ · Group</button>
+      </div>
+
+      <div class="name-inputs" id="nameInputs"></div>
+
+      <label class="field-label">Veto Rule</label>
+      <div class="seg" id="vetoSeg" role="radiogroup" aria-label="Veto rule">
+        <button class="seg-btn" data-veto="true" role="radio">1 Veto / Player</button>
+        <button class="seg-btn" data-veto="false" role="radio">No Vetoes</button>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-primary" id="savePartyBtn">Let's Eat 🎲</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CUISINE CUSTOMIZER MODAL ============ -->
+  <div class="modal-overlay" id="cuisineModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cuisineTitle">
+      <h2 id="cuisineTitle" class="modal-title">Tonight's Menu ⚙️</h2>
+      <div class="cuisine-list" id="cuisineList"></div>
+      <div class="add-row">
+        <input type="text" id="newCuisineName" class="text-input" placeholder="Add a cuisine…" maxlength="24" />
+        <button class="btn-add" id="addCuisineBtn">+ Add</button>
+      </div>
+      <div class="modal-actions modal-actions--split">
+        <button class="btn-ghost" id="restoreDefaultsBtn">Restore Defaults</button>
+        <button class="btn-primary" id="closeCuisineBtn">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ RESULT MODAL ============ -->
+  <div class="modal-overlay" id="resultModal" hidden>
+    <div class="modal modal--result" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+      <p class="result-kicker">🎉 THE WHEEL HAS SPOKEN!</p>
+      <h2 id="resultTitle" class="result-cuisine"><span id="resultEmoji"></span> <span id="resultName"></span></h2>
+
+      <div class="result-actions">
+        <a id="mapsLink" class="btn-action btn-maps" target="_blank" rel="noopener noreferrer">📍 Open in Google Maps</a>
+        <a id="uberLink" class="btn-action btn-uber" target="_blank" rel="noopener noreferrer">🛵 Search on Uber Eats</a>
+      </div>
+
+      <div class="veto-section" id="vetoSection">
+        <div class="divider"></div>
+        <p class="veto-prompt" id="vetoPrompt">Not feeling it? Spend a veto:</p>
+        <div class="veto-btns" id="vetoBtns"></div>
+      </div>
+
+      <p class="final-banner" id="finalBanner" hidden>🔒 No Vetoes Left — The Wheel's Decision is Final!</p>
+
+      <button class="btn-primary btn-done" id="closeResultBtn">✅ Done</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
+  <script src="./app.js" defer></script>
+</body>
+</html>

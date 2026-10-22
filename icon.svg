@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#FAF7F2"/>
+  <g transform="translate(256 256)">
+    <!-- wheel slices -->
+    <g>
+      <path d="M0 0 L0 -176 A176 176 0 0 1 152.4 -88 Z" fill="#E07A5F"/>
+      <path d="M0 0 L152.4 -88 A176 176 0 0 1 152.4 88 Z" fill="#81B29A"/>
+      <path d="M0 0 L152.4 88 A176 176 0 0 1 0 176 Z" fill="#F2CC8F"/>
+      <path d="M0 0 L0 176 A176 176 0 0 1 -152.4 88 Z" fill="#3D405B"/>
+      <path d="M0 0 L-152.4 88 A176 176 0 0 1 -152.4 -88 Z" fill="#F4A261"/>
+      <path d="M0 0 L-152.4 -88 A176 176 0 0 1 0 -176 Z" fill="#2A9D8F"/>
+    </g>
+    <circle r="176" fill="none" stroke="#ffffff" stroke-width="6" opacity="0.7"/>
+    <circle r="46" fill="#3D405B" stroke="#ffffff" stroke-width="10"/>
+  </g>
+  <!-- pointer -->
+  <path d="M256 54 L286 104 L226 104 Z" fill="#3D405B"/>
+</svg>

@@ -1,0 +1,19 @@
+{
+  "name": "Foodie Fortune",
+  "short_name": "Foodie",
+  "description": "Spin the wheel to decide what's for dinner.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF7F2",
+  "theme_color": "#FAF7F2",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
