@@ -21,6 +21,7 @@
     <header class="topbar">
       <button class="icon-btn" id="btnCuisines" aria-label="Edit cuisines" title="Cuisines">⚙️</button>
       <button class="icon-btn" id="btnParty" aria-label="Edit party" title="Party">👥</button>
+      <button class="icon-btn" id="btnHistory" aria-label="Meal history" title="History">📜</button>
       <button class="icon-btn" id="btnTheme" aria-label="Change theme" title="Theme">🎨</button>
       <button class="icon-btn" id="btnReset" aria-label="Reset session" title="Reset session">🔄</button>
     </header>
@@ -115,6 +116,16 @@
   <div class="modal-overlay" id="cuisineModal" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cuisineTitle">
       <h2 id="cuisineTitle" class="modal-title">Tonight's Menu ⚙️</h2>
+      <label class="rest-row" for="restDays">
+        <span>Skip recent picks</span>
+        <select id="restDays" class="rest-select">
+          <option value="0">Off</option>
+          <option value="1">Last day</option>
+          <option value="3">Last 3 days</option>
+          <option value="7">Last week</option>
+        </select>
+      </label>
+      <p class="rest-hint">Tap ☆ to favourite a cuisine and give it a double-width slice.</p>
       <div class="cuisine-list" id="cuisineList"></div>
       <div class="add-row">
         <input type="text" id="newCuisineEmoji" class="emoji-input" placeholder="🍽️" maxlength="8" aria-label="Emoji for new cuisine" />
@@ -124,6 +135,19 @@
       <div class="modal-actions modal-actions--split">
         <button class="btn-ghost" id="restoreDefaultsBtn">Restore Defaults</button>
         <button class="btn-primary" id="closeCuisineBtn">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ HISTORY MODAL ============ -->
+  <div class="modal-overlay" id="historyModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+      <h2 id="historyTitle" class="modal-title">Meal History 📜</h2>
+      <div class="history-stats" id="historyStats"></div>
+      <div class="history-list" id="historyList"></div>
+      <div class="modal-actions modal-actions--split">
+        <button class="btn-ghost" id="clearHistoryBtn">Clear History</button>
+        <button class="btn-primary" id="closeHistoryBtn">Done</button>
       </div>
     </div>
   </div>

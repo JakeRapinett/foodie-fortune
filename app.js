@@ -118,6 +118,8 @@
       vetoesEnabled: true,
       lastMode: "takeaway",
       theme: "classic",
+      restDays: 0,
+      history: [],
       cuisines: clone(DEFAULT_CUISINES)
     };
   }
@@ -130,6 +132,7 @@
     isSpinning: false,
     currentRotation: 0,
     winner: null,
+    recorded: false,
     players: [],
     eliminatedCuisineIds: []
   };
@@ -162,6 +165,7 @@
   const cuisineModal = $("cuisineModal");
   const resultModal = $("resultModal");
   const themeModal = $("themeModal");
+  const historyModal = $("historyModal");
 
   // --------------- Helpers ---------------
   function triggerHaptic(ms = 12) {
@@ -170,8 +174,49 @@
     } catch (e) { /* unsupported */ }
   }
 
-  function activeCuisines() {
+  // --------------- History / "rest" logic ---------------
+  const HISTORY_MAX = 100;
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  function history() {
+    if (!Array.isArray(config.history)) config.history = [];
+    return config.history;
+  }
+
+  // Ids of cuisines picked within the last `restDays` days.
+  function recentlyEatenIds() {
+    const days = Number(config.restDays) || 0;
+    if (!days) return new Set();
+    const cutoff = Date.now() - days * DAY_MS;
+    return new Set(history().filter(h => h.t >= cutoff).map(h => h.id));
+  }
+
+  function baseActive() {
     return config.cuisines.filter(c => c.enabled && !session.eliminatedCuisineIds.includes(c.id));
+  }
+
+  // Wheel pool. Recently eaten cuisines sit out, unless that would leave < 2 slices.
+  function activeCuisines() {
+    const base = baseActive();
+    const rest = recentlyEatenIds();
+    if (!rest.size) return base;
+    const rested = base.filter(c => !rest.has(c.id));
+    return rested.length >= 2 ? rested : base;
+  }
+
+  function weightOf(c) {
+    return c && c.fav ? 2 : 1;
+  }
+
+  // Record the confirmed pick once per spin result.
+  function recordPick() {
+    const w = session.winner;
+    if (!w || session.recorded) return;
+    session.recorded = true;
+    const h = history();
+    h.unshift({ id: w.id, name: w.name, emoji: w.emoji, mode: session.mode, t: Date.now() });
+    if (h.length > HISTORY_MAX) h.length = HISTORY_MAX;
+    saveConfig();
   }
 
   function fireConfetti() {
@@ -224,9 +269,10 @@
       return;
     }
 
-    const arc = TAU / n;
+    const offsets = sliceOffsets(list);
     for (let i = 0; i < n; i++) {
-      const start = session.currentRotation + i * arc;
+      const arc = offsets[i + 1] - offsets[i];
+      const start = session.currentRotation + offsets[i];
       const end = start + arc;
       ctx.beginPath();
       ctx.moveTo(r, r);
@@ -247,7 +293,8 @@
       ctx.textBaseline = "middle";
       ctx.fillStyle = "#fff";
       const label = `${list[i].emoji} ${list[i].name}`;
-      const fontSize = Math.max(11, Math.min(16, r * 0.11 - n * 0.3));
+      const totalW = list.reduce((s, c) => s + weightOf(c), 0);
+      const fontSize = Math.max(11, Math.min(16, r * 0.11 - totalW * 0.3));
       ctx.font = `700 ${fontSize}px -apple-system, "Segoe UI", Roboto, sans-serif`;
       ctx.shadowColor = "rgba(0,0,0,0.3)";
       ctx.shadowBlur = 2;
@@ -267,20 +314,32 @@
   let spinVelocity = 0;
   let lastTickSlice = -1;
 
+  // Cumulative slice start angles (length n+1). Favourites get a double-width slice.
+  function sliceOffsets(list) {
+    const total = list.reduce((s, c) => s + weightOf(c), 0);
+    const out = [0];
+    list.forEach(c => out.push(out[out.length - 1] + (TAU * weightOf(c)) / total));
+    return out;
+  }
+
   function sliceAtPointer() {
     const list = activeCuisines();
     const n = list.length;
     if (!n) return { index: -1, list };
-    const arc = TAU / n;
+    const offsets = sliceOffsets(list);
     // Angle at the pointer relative to wheel rotation
     let a = (POINTER_ANGLE - session.currentRotation) % TAU;
     if (a < 0) a += TAU;
-    const index = Math.floor(a / arc) % n;
+    let index = n - 1;
+    for (let i = 0; i < n; i++) {
+      if (a < offsets[i + 1]) { index = i; break; }
+    }
     return { index, list };
   }
 
   function startSpin() {
     if (session.isSpinning) return;
+    session.recorded = false;
     const list = activeCuisines();
     if (list.length < 2) {
       // Edge case: single cuisine -> auto-declare
@@ -369,6 +428,7 @@
       finalBanner.hidden = false;
       fireConfetti();
       triggerHaptic(60);
+      recordPick(); // no vetoes left: this is the final decision
     }
 
     show(resultModal);
@@ -388,7 +448,14 @@
 
   function executeVeto(player) {
     player.hasVetoed = true;
-    if (session.winner) session.eliminatedCuisineIds.push(session.winner.id);
+    if (session.winner) {
+      session.eliminatedCuisineIds.push(session.winner.id);
+      // If the rejected pick was already logged (e.g. a link was tapped first), undo it.
+      if (session.recorded && history()[0] && history()[0].id === session.winner.id) {
+        history().shift();
+        saveConfig();
+      }
+    }
     triggerHaptic(20);
     hide(resultModal);
     renderChips();
@@ -618,13 +685,79 @@
 
   // ================= Cuisine Customizer =================
   function openCuisineModal() {
+    $("restDays").value = String(Number(config.restDays) || 0);
     renderCuisineList();
     show(cuisineModal);
+  }
+
+  // ================= History =================
+  function formatWhen(t) {
+    const d = new Date(t);
+    const days = Math.floor((Date.now() - t) / DAY_MS);
+    const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    if (days < 1 && new Date().getDate() === d.getDate()) return `Today, ${time}`;
+    if (days < 2) return `Yesterday, ${time}`;
+    return d.toLocaleDateString([], { day: "numeric", month: "short" });
+  }
+
+  const MODE_LABELS = { takeaway: "Takeaway", dine_in: "Dine-in", cook_home: "Cooked" };
+
+  function renderHistory() {
+    const h = history();
+    const stats = $("historyStats");
+    const list = $("historyList");
+    stats.innerHTML = "";
+    list.innerHTML = "";
+
+    if (!h.length) {
+      const p = document.createElement("p");
+      p.className = "history-empty";
+      p.textContent = "Nothing yet. Picks show up here once you hit Done.";
+      list.appendChild(p);
+      return;
+    }
+
+    // Top cuisines by count (emoji + name + count)
+    const counts = new Map();
+    h.forEach(x => {
+      const e = counts.get(x.id) || { emoji: x.emoji, name: x.name, n: 0 };
+      e.n++;
+      counts.set(x.id, e);
+    });
+    [...counts.values()].sort((a, b) => b.n - a.n).slice(0, 5).forEach(e => {
+      const chip = document.createElement("span");
+      chip.className = "stat-chip";
+      chip.textContent = `${e.emoji} ${e.name} \u00d7${e.n}`;
+      stats.appendChild(chip);
+    });
+
+    h.slice(0, 30).forEach(x => {
+      const row = document.createElement("div");
+      row.className = "history-row";
+      const main = document.createElement("span");
+      main.className = "history-main";
+      main.textContent = `${x.emoji} ${x.name}`;
+      const meta = document.createElement("span");
+      meta.className = "history-meta";
+      meta.textContent = `${MODE_LABELS[x.mode] || ""} \u00b7 ${formatWhen(x.t)}`;
+      row.append(main, meta);
+      list.appendChild(row);
+    });
+  }
+
+  function openHistoryModal() {
+    renderHistory();
+    show(historyModal);
   }
 
   function renderCuisineList() {
     const list = $("cuisineList");
     list.innerHTML = "";
+    // Only flag "resting" cuisines when the rest filter is actually keeping them off the wheel
+    const pool = new Set(activeCuisines().map(c => c.id));
+    const resting = new Set(
+      [...recentlyEatenIds()].filter(id => !pool.has(id) && baseActive().some(c => c.id === id))
+    );
     config.cuisines.forEach(c => {
       const row = document.createElement("div");
       row.className = "cuisine-row";
@@ -645,7 +778,28 @@
       const name = document.createElement("span");
       name.textContent = c.name;
       label.append(cb, emoji, name);
+      if (resting.has(c.id)) {
+        const tag = document.createElement("span");
+        tag.className = "rest-tag";
+        tag.textContent = "resting";
+        label.appendChild(tag);
+      }
       row.appendChild(label);
+
+      // Favourite star: favourites get a double-width wheel slice
+      const star = document.createElement("button");
+      star.className = "star-btn" + (c.fav ? " is-fav" : "");
+      star.textContent = c.fav ? "\u2605" : "\u2606";
+      star.setAttribute("aria-pressed", c.fav ? "true" : "false");
+      star.setAttribute("aria-label", `${c.fav ? "Unfavourite" : "Favourite"} ${c.name}`);
+      star.title = "Favourite: double-width slice";
+      star.addEventListener("click", () => {
+        c.fav = !c.fav;
+        saveConfig();
+        renderCuisineList();
+        drawWheel();
+      });
+      row.appendChild(star);
 
       // Custom cuisines (id prefix "cx_") are deletable
       if (c.id.startsWith("cx_")) {
@@ -772,11 +926,38 @@
     $("closeCuisineBtn").addEventListener("click", () => hide(cuisineModal));
 
     // Result modal
-    $("closeResultBtn").addEventListener("click", () => hide(resultModal));
+    $("closeResultBtn").addEventListener("click", () => { recordPick(); hide(resultModal); drawWheel(); refreshSpinState(); });
+    ["mapsLink", "uberLink", "recipeLink"].forEach(id => $(id).addEventListener("click", recordPick));
+
+    // History modal
+    $("btnHistory").addEventListener("click", openHistoryModal);
+    $("closeHistoryBtn").addEventListener("click", () => hide(historyModal));
+    $("clearHistoryBtn").addEventListener("click", () => {
+      if (!history().length) return;
+      if (!confirm("Clear all meal history?")) return;
+      config.history = [];
+      saveConfig();
+      renderHistory();
+      drawWheel();
+      refreshSpinState();
+    });
+
+    // Rest-days selector (cuisine modal)
+    $("restDays").addEventListener("change", (e) => {
+      config.restDays = Number(e.target.value) || 0;
+      saveConfig();
+      renderCuisineList();
+      drawWheel();
+      refreshSpinState();
+    });
 
     // Close modals when tapping the dark overlay
-    [partyModal, cuisineModal, resultModal, themeModal].forEach(m => {
-      m.addEventListener("click", (e) => { if (e.target === m) hide(m); });
+    [partyModal, cuisineModal, resultModal, themeModal, historyModal].forEach(m => {
+      m.addEventListener("click", (e) => {
+        if (e.target !== m) return;
+        if (m === resultModal) { recordPick(); drawWheel(); refreshSpinState(); }
+        hide(m);
+      });
     });
 
     window.addEventListener("resize", sizeCanvas);
